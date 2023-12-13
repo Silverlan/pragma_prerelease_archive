@@ -1,0 +1,54 @@
+name: Publish Nightly Release
+on:
+  workflow_dispatch:
+    inputs:
+
+concurrency:
+  group: environment-lin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build - ${{ matrix.config.os }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - os: ubuntu-22.04
+            name: "Ubuntu GCC-11"
+            artifact: "ubuntu_gcc.7z"
+            build_type: "RelWithDebInfo"
+            cc: "clang-14"
+            cxx: "clang++-14"
+            archiver: "7z a"
+            generators: "Unix Makefiles"
+            build_dir: 'build'
+    steps:
+      - name: Download latest nightly Release
+        id: download-release
+        uses: robinraju/release-downloader@v1.3
+        with: 
+          repository: "Silverlan/pragma"
+          tag: "nightly"
+          fileName: "*"
+          out-file-path: ""
+
+      - name: Determine SHA of nightly Release
+        shell: bash
+        id: "determine-sha"
+        run:   |
+          git clone https://github.com/Silverlan/pragma.git
+          cd pragma
+          echo "Tag: ${{steps.download-release.outputs.tag_name}})"
+          short_commit_sha=$(git rev-parse --short nightly)
+          echo "commit_sha=$short_commit_sha" >>$GITHUB_OUTPUT
+          cd ..
+          rm -rf pragma
+
+      - name: Release
+        uses: pyTooling/Actions/releaser/composite@main
+        with:
+          tag: "${{ steps.determine-sha.outputs.commit_sha }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: "*"
