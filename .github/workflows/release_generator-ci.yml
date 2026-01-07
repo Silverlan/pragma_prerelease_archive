@@ -27,7 +27,7 @@ jobs:
     steps:
       - name: Download latest nightly Release
         id: download-release
-        uses: robinraju/release-downloader@v1.3
+        uses: robinraju/release-downloader@v1.12
         with: 
           repository: "Silverlan/pragma"
           tag: "nightly"
@@ -52,3 +52,4 @@ jobs:
           tag: "${{ steps.determine-sha.outputs.commit_sha }}"
           token: ${{ secrets.GITHUB_TOKEN }}
           files: "*"
+
