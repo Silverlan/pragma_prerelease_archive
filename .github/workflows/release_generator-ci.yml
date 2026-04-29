@@ -1,11 +1,13 @@
 name: Publish Nightly Release
 on:
   workflow_dispatch:
-    inputs:
 
 concurrency:
   group: environment-lin-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: write  # required to create/update releases
 
 jobs:
   build:
@@ -28,28 +30,26 @@ jobs:
       - name: Download latest nightly Release
         id: download-release
         uses: robinraju/release-downloader@v1.12
-        with: 
+        with:
           repository: "Silverlan/pragma"
           tag: "nightly"
           fileName: "*"
-          out-file-path: ""
+          out-file-path: "downloaded"
 
       - name: Determine SHA of nightly Release
         shell: bash
-        id: "determine-sha"
-        run:   |
-          git clone https://github.com/Silverlan/pragma.git
-          cd pragma
-          echo "Tag: ${{steps.download-release.outputs.tag_name}})"
+        id: determine-sha
+        run: |
+          git clone --no-checkout https://github.com/Silverlan/pragma.git pragma-tmp
+          cd pragma-tmp
           short_commit_sha=$(git rev-parse --short nightly)
-          echo "commit_sha=$short_commit_sha" >>$GITHUB_OUTPUT
+          echo "commit_sha=$short_commit_sha" >> $GITHUB_OUTPUT
           cd ..
-          rm -rf pragma
+          rm -rf pragma-tmp
 
       - name: Release
-        uses: pyTooling/Actions/releaser/composite@main
+        uses: softprops/action-gh-release@v2
         with:
-          tag: "${{ steps.determine-sha.outputs.commit_sha }}"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          files: "*"
-
+          tag_name: "${{ steps.determine-sha.outputs.commit_sha }}"
+          files: "downloaded/*"
+          prerelease: true
